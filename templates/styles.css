@@ -1,0 +1,418 @@
+/* ============================================================================
+   styles.css — CSS de Imprenta para Event Guest Manager
+   Diseñado para papel A4 vertical, 2 columnas, tipografía editorial sobria.
+   Usa CSS Paged Media (@page) compatible con WeasyPrint.
+   ============================================================================ */
+
+/* ── Importar tipografía ── */
+/* WeasyPrint no carga fuentes web externas por defecto,
+   por eso usamos la familia de sistema más cercana. */
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;600&family=Inter:wght@300;400;600&display=swap');
+
+/* ── Variables de diseño ──────────────────────────────────────────────────── */
+:root {
+  --color-primario:     #1a1a2e;
+  --color-acento:       #16213e;
+  --color-dorado:       #c9a84c;
+  --color-dorado-suave: #e8d5a3;
+  --color-gris-claro:   #f5f5f0;
+  --color-gris-medio:   #d0cfc8;
+  --color-gris-texto:   #555555;
+  --color-dudoso:       #fff3cd;
+  --color-dudoso-borde: #f0ad4e;
+
+  --fuente-titulo:  'EB Garamond', Georgia, 'Times New Roman', serif;
+  --fuente-cuerpo:  'Inter', 'Helvetica Neue', Arial, sans-serif;
+
+  --tamanio-base:   9pt;
+  --tamanio-letra:  18pt;
+  --tamanio-h1:     28pt;
+  --tamanio-mesa:   16pt;
+
+  --margen-pagina:  15mm;
+  --espacio-s:      3mm;
+  --espacio-m:      6mm;
+  --espacio-l:      10mm;
+}
+
+/* ============================================================================
+   CONFIGURACIÓN DE PÁGINA (CSS Paged Media)
+   ============================================================================ */
+
+@page {
+  size: A4 portrait;
+  margin: var(--margen-pagina) var(--margen-pagina) 20mm var(--margen-pagina);
+
+  /* Encabezado corriendo en cada página */
+  @top-center {
+    content: element(encabezado-corriente);
+    border-bottom: 0.5pt solid var(--color-gris-medio);
+    padding-bottom: 3mm;
+  }
+
+  /* Pie con numeración */
+  @bottom-center {
+    content: element(pie-corriente);
+    border-top: 0.5pt solid var(--color-gris-medio);
+    padding-top: 3mm;
+  }
+}
+
+@page:first {
+  /* La portada no lleva encabezado ni pie */
+  @top-center { content: none; }
+  @bottom-center { content: none; }
+}
+
+/* ── Contadores de página ──────────────────────────────────────────────────── */
+.numero-pagina::after {
+  content: counter(page);
+}
+
+.total-paginas::after {
+  content: counter(pages);
+}
+
+/* ============================================================================
+   RESET Y BASE
+   ============================================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  font-family: var(--fuente-cuerpo);
+  font-size: var(--tamanio-base);
+  color: var(--color-primario);
+  background: white;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ============================================================================
+   ENCABEZADO Y PIE CORRIENTES (positioned as running elements)
+   ============================================================================ */
+
+#encabezado-pagina {
+  position: running(encabezado-corriente);
+  width: 100%;
+}
+
+.encabezado-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6mm;
+  font-size: 7.5pt;
+  color: var(--color-gris-texto);
+  padding-bottom: 2mm;
+}
+
+.encabezado-sep-fecha {
+  margin-right: 2mm;
+}
+
+.encabezado-titulo {
+  font-family: var(--fuente-titulo);
+  font-weight: 600;
+  font-size: 9pt;
+  color: var(--color-primario);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.encabezado-sep {
+  margin: 0 3mm;
+  color: var(--color-gris-medio);
+}
+
+.encabezado-lugar {
+  font-style: italic;
+}
+
+.encabezado-fecha {
+  text-align: right;
+}
+
+#pie-pagina {
+  position: running(pie-corriente);
+  width: 100%;
+}
+
+#pie-pagina {
+  display: flex;
+  justify-content: space-between;
+  font-size: 7pt;
+  color: var(--color-gris-texto);
+  padding-top: 2mm;
+}
+
+/* ============================================================================
+   PORTADA
+   ============================================================================ */
+
+.portada {
+  page-break-after: always;
+  break-after: page;
+  min-height: 240mm;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20mm 15mm;
+}
+
+.portada-linea-decorativa {
+  width: 60mm;
+  height: 1pt;
+  background: var(--color-dorado);
+  margin: 8mm auto;
+}
+
+.portada-titulo {
+  font-family: var(--fuente-titulo);
+  font-size: var(--tamanio-h1);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-primario);
+  margin-bottom: 4mm;
+}
+
+.portada-evento {
+  font-family: var(--fuente-titulo);
+  font-size: 20pt;
+  color: var(--color-dorado);
+  margin-bottom: 3mm;
+}
+
+.portada-fecha {
+  font-size: 11pt;
+  color: var(--color-gris-texto);
+  margin-bottom: 2mm;
+}
+
+.portada-lugar {
+  font-size: 10pt;
+  font-style: italic;
+  color: var(--color-gris-texto);
+}
+
+.portada-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10mm;
+  margin: 8mm 0 4mm;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-numero {
+  font-family: var(--fuente-titulo);
+  font-size: 24pt;
+  font-weight: 600;
+  color: var(--color-primario);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 7pt;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-gris-texto);
+  margin-top: 1mm;
+}
+
+.stat-sep {
+  font-size: 20pt;
+  color: var(--color-gris-medio);
+}
+
+.portada-modo-label {
+  font-size: 8pt;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-gris-texto);
+  margin-top: 2mm;
+}
+
+/* ============================================================================
+   CONTENIDO PRINCIPAL
+   ============================================================================ */
+
+.contenido-principal {
+  margin-top: 0;
+}
+
+/* ── MODO ALFABÉTICO: 2 Columnas ──────────────────────────────────────────── */
+
+.columnas-dobles {
+  column-count: 2;
+  column-gap: 8mm;
+  column-rule: 0.5pt solid var(--color-gris-medio);
+  orphans: 3;
+  widows: 3;
+}
+
+.bloque-letra {
+  break-inside: avoid-column;
+  margin-bottom: var(--espacio-m);
+}
+
+.separador-letra {
+  font-family: var(--fuente-titulo);
+  font-size: var(--tamanio-letra);
+  font-weight: 600;
+  color: var(--color-dorado);
+  border-bottom: 1pt solid var(--color-dorado-suave);
+  margin-bottom: 2mm;
+  padding-bottom: 1mm;
+  line-height: 1;
+  break-after: avoid;
+}
+
+/* ── Listas de invitados (modo alfabético) ────────────────────────────────── */
+
+.lista-invitados {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.fila-invitado {
+  padding: 0.8mm 0;
+  border-bottom: 0.3pt solid var(--color-gris-claro);
+  break-inside: avoid;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2mm;
+}
+
+.fila-dudosa {
+  background-color: var(--color-dudoso);
+  border-left: 1.5pt solid var(--color-dudoso-borde);
+  padding-left: 1.5mm;
+}
+
+.inv-nombre-completo {
+  flex: 1;
+  font-size: 8.5pt;
+  line-height: 1.35;
+}
+
+.inv-apellido {
+  font-weight: 600;
+}
+
+.inv-nombre {
+  font-weight: 400;
+}
+
+.inv-mesa {
+  font-size: 7pt;
+  color: var(--color-gris-texto);
+  background: var(--color-gris-claro);
+  padding: 0.3mm 1.5mm;
+  border-radius: 1mm;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.inv-menu {
+  font-size: 6.5pt;
+  font-style: italic;
+  color: var(--color-gris-texto);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── MODO MESAS ───────────────────────────────────────────────────────────── */
+
+.bloque-mesa {
+  break-inside: avoid;
+  margin-bottom: var(--espacio-l);
+}
+
+.nueva-pagina {
+  page-break-before: always;
+  break-before: page;
+}
+
+.encabezado-mesa {
+  background: var(--color-primario);
+  color: white;
+  padding: 4mm 6mm;
+  display: flex;
+  align-items: baseline;
+  gap: 4mm;
+  margin-bottom: 4mm;
+}
+
+.mesa-etiqueta {
+  font-size: 7pt;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  opacity: 0.7;
+}
+
+.mesa-numero {
+  font-family: var(--fuente-titulo);
+  font-size: var(--tamanio-mesa);
+  font-weight: 600;
+  flex: 1;
+}
+
+.mesa-cantidad {
+  font-size: 7.5pt;
+  opacity: 0.8;
+}
+
+.lista-invitados-mesa {
+  list-style: decimal;
+  padding-left: 8mm;
+}
+
+.fila-invitado-mesa {
+  padding: 1.5mm 0;
+  border-bottom: 0.3pt solid var(--color-gris-claro);
+  break-inside: avoid;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3mm;
+}
+
+.inv-datos-mesa {
+  flex: 1;
+}
+
+.inv-nombre-principal {
+  font-size: 9pt;
+  font-weight: 600;
+}
+
+.inv-acompanantes {
+  font-size: 7.5pt;
+  color: var(--color-gris-texto);
+  margin-left: 2mm;
+}
+
+.inv-menu-badge {
+  font-size: 7pt;
+  font-style: italic;
+  color: white;
+  background: var(--color-dorado);
+  padding: 0.5mm 2mm;
+  border-radius: 1mm;
+  white-space: nowrap;
+  flex-shrink: 0;
+}

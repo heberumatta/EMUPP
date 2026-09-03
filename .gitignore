@@ -1,0 +1,28 @@
+# Entornos y compilados Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+
+# Archivos específicos de SO
+.DS_Store
+Thumbs.db
+
+# Configuración de Streamlit
+.streamlit/secrets.toml
+
+# Archivos de datos / exportaciones
+*.xlsx
+*.csv
+*.pdf
+
+# Directorios de compilación PyInstaller
+build/
+dist/
+*.spec
+
+# Caché de testing
+.pytest_cache/
+.coverage

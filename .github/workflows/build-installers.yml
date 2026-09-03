@@ -1,0 +1,90 @@
+name: Build Installers
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:  # Permite ejecución manual
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+      fail-fast: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install system dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpango-1.0-0 libpangocairo-1.0-0 libcairo2 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info
+
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install pango cairo glib fontconfig
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build executable with PyInstaller
+        run: |
+          pyinstaller emupp.spec
+        
+      - name: Package Linux
+        if: runner.os == 'Linux'
+        run: |
+          cd dist
+          tar -czvf Gestor_EMUPP-linux.tar.gz Gestor_EMUPP
+          mv Gestor_EMUPP-linux.tar.gz ../
+        
+      - name: Package macOS
+        if: runner.os == 'macOS'
+        run: |
+          cd dist
+          zip -r Gestor_EMUPP-macos.zip Gestor_EMUPP
+          mv Gestor_EMUPP-macos.zip ../
+
+      - name: Upload Linux artifact
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gestor_EMUPP-linux
+          path: Gestor_EMUPP-linux.tar.gz
+
+      - name: Upload macOS artifact
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gestor_EMUPP-macos
+          path: Gestor_EMUPP-macos.zip
+
+      - name: Upload Windows artifact
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gestor_EMUPP-windows
+          path: dist/Gestor_EMUPP.exe
+          
+      - name: Upload to Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            Gestor_EMUPP-linux.tar.gz
+            Gestor_EMUPP-macos.zip
+            dist/Gestor_EMUPP.exe

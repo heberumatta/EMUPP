@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lista de Invitados — {{ evento.nombre_evento }}</title>
+  <style>
+    {{ css_content }}
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       ENCABEZADO GLOBAL (se repite en cada página via CSS @page running)
+  ══════════════════════════════════════════════════════════════════════ -->
+  <div id="encabezado-pagina">
+    <div class="encabezado-inner">
+      <div class="encabezado-evento">
+        <span class="encabezado-titulo">{{ evento.nombre_evento }}</span>
+        {% if evento.lugar %}
+        <span class="encabezado-sep">·</span>
+        <span class="encabezado-lugar">{{ evento.lugar }}</span>
+        {% endif %}
+      </div>
+      <div class="encabezado-fecha">
+        {% if evento.lugar and evento.fecha %}<span class="encabezado-sep encabezado-sep-fecha">·</span>{% endif %}
+        {{ evento.fecha }}
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       PIE DE PÁGINA (se repite en cada página via CSS @page running)
+  ══════════════════════════════════════════════════════════════════════ -->
+  <div id="pie-pagina">
+    <span class="pie-total">{{ total_invitados }} invitados</span>
+    <span class="pie-paginas">Página <span class="numero-pagina"></span> de <span class="total-paginas"></span></span>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       PORTADA / TÍTULO PRINCIPAL
+  ══════════════════════════════════════════════════════════════════════ -->
+  <div class="portada">
+    <div class="portada-linea-decorativa"></div>
+    <h1 class="portada-titulo">Lista de Invitados</h1>
+    <p class="portada-evento">{{ evento.nombre_evento }}</p>
+    {% if evento.fecha %}
+    <p class="portada-fecha">{{ evento.fecha }}</p>
+    {% endif %}
+    {% if evento.lugar %}
+    <p class="portada-lugar">{{ evento.lugar }}</p>
+    {% endif %}
+    <div class="portada-stats">
+      <div class="stat-item">
+        <span class="stat-numero">{{ total_invitados }}</span>
+        <span class="stat-label">Invitados</span>
+      </div>
+      <div class="stat-sep">|</div>
+      <div class="stat-item">
+        <span class="stat-numero">{{ grupos | length }}</span>
+        <span class="stat-label">{% if modo == 'alfabetico' %}Letras{% else %}Mesas{% endif %}</span>
+      </div>
+    </div>
+    <div class="portada-linea-decorativa"></div>
+    <p class="portada-modo-label">
+      {% if modo == 'alfabetico' %}Ordenado alfabéticamente{% else %}Organizado por mesas{% endif %}
+    </p>
+  </div><!-- .portada -->
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       CONTENIDO PRINCIPAL
+  ══════════════════════════════════════════════════════════════════════ -->
+  <div class="contenido-principal">
+
+    {% if modo == 'alfabetico' %}
+    <!-- ── MODO ALFABÉTICO: 2 columnas con separadores de letra ──────── -->
+    <div class="columnas-dobles">
+      {% for grupo in grupos %}
+      <div class="bloque-letra">
+        <div class="separador-letra">{{ grupo.letra }}</div>
+        <ul class="lista-invitados">
+          {% for inv in grupo.invitados %}
+          <li class="fila-invitado {% if inv.es_dudoso %}fila-dudosa{% endif %}">
+            <span class="inv-nombre-completo">
+              <span class="inv-apellido">{{ inv.apellido }}</span>{% if inv.apellido and inv.nombre %}, {% endif %}<span class="inv-nombre">{{ inv.nombre }}</span>
+            </span>
+            {% if inv.mesa %}
+            <span class="inv-mesa">Mesa {{ inv.mesa }}</span>
+            {% endif %}
+            {% if inv.menu %}
+            <span class="inv-menu">{{ inv.menu }}</span>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+      </div><!-- .bloque-letra -->
+      {% endfor %}
+    </div><!-- .columnas-dobles -->
+
+    {% else %}
+    <!-- ── MODO POR MESAS: Salto de página entre mesas ──────────────── -->
+    {% for grupo in grupos %}
+    <div class="bloque-mesa {% if not loop.first and salto_pagina_mesas %}nueva-pagina{% endif %}">
+      <div class="encabezado-mesa">
+        <span class="mesa-etiqueta">Mesa</span>
+        <span class="mesa-numero">{{ grupo.mesa }}</span>
+        <span class="mesa-cantidad">{{ grupo.invitados | length }} personas</span>
+      </div>
+      <ol class="lista-invitados-mesa">
+        {% for inv in grupo.invitados %}
+        <li class="fila-invitado-mesa {% if inv.es_dudoso %}fila-dudosa{% endif %}">
+          <div class="inv-datos-mesa">
+            <span class="inv-nombre-principal">
+              {{ inv.nombre }} {{ inv.apellido }}
+            </span>
+            {% if inv.acompanantes %}
+            <span class="inv-acompanantes">+ {{ inv.acompanantes }} acompañante(s)</span>
+            {% endif %}
+          </div>
+          {% if inv.menu %}
+          <span class="inv-menu-badge">{{ inv.menu }}</span>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ol>
+    </div><!-- .bloque-mesa -->
+    {% endfor %}
+    {% endif %}
+
+  </div><!-- .contenido-principal -->
+
+</body>
+</html>
