@@ -872,6 +872,9 @@ def render_exportacion(
 
     pdf_status_placeholder = st.empty()
     col_excel, col_pdf, col_info = st.columns([2, 2, 4], gap="medium")
+    # Indicador en session_state para evitar clicks concurrentes y duplicación
+    if "pdf_generando" not in st.session_state:
+        st.session_state["pdf_generando"] = False
 
     # ── Exportar Excel ────────────────────────────────────────────────────────
     with col_excel:
@@ -892,7 +895,11 @@ def render_exportacion(
     # ── Exportar PDF ──────────────────────────────────────────────────────────
     with col_pdf:
         st.markdown("**🖨️ PDF de Imprenta**")
-        if st.button("🔄 Generar PDF", use_container_width=True, key="btn_generar_pdf"):
+        generar_disabled = bool(st.session_state.get("pdf_generando", False))
+
+        if st.button("🔄 Generar PDF", use_container_width=True, key="btn_generar_pdf", disabled=generar_disabled):
+            # Marcar como generando para evitar nuevos clicks
+            st.session_state["pdf_generando"] = True
             with pdf_status_placeholder:
                 with st.spinner("Compilando PDF con WeasyPrint…"):
                     try:
@@ -908,7 +915,10 @@ def render_exportacion(
                         st.success("PDF generado correctamente.")
                     except Exception as e:
                         st.error(f"Error generando PDF: {e}")
+                    finally:
+                        st.session_state["pdf_generando"] = False
 
+        # Mostrar botón de descarga si el PDF ya fue generado
         if "pdf_bytes" in st.session_state:
             st.download_button(
                 label="⬇ Descargar PDF (.pdf)",
