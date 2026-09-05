@@ -711,7 +711,7 @@ def render_panel_control(df_procesado: pd.DataFrame) -> pd.DataFrame:
         "motivo": st.column_config.TextColumn("Nota / Motivo", width="large", disabled=True),
     }
 
-        df_editado = st.data_editor(
+    df_editado = st.data_editor(
         df_editor,
         column_config=column_config,
         column_order=[
