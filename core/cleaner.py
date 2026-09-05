@@ -368,11 +368,9 @@ def procesar_dataframe(
         if c and c in df.columns
     ]
     if columnas_a_check:
-        mask_todas_vacias = (
-            df[columnas_a_check].fillna("")
-            .applymap(lambda x: str(x).strip() == "")
-            .all(axis=1)
-        )
+        subset = df[columnas_a_check].fillna("").astype(str)
+        # strip each value and compare to empty string in a column-wise manner
+        mask_todas_vacias = subset.apply(lambda col: col.str.strip() == "").all(axis=1)
         if mask_todas_vacias.any():
             df = df.loc[~mask_todas_vacias].reset_index(drop=True)
 
