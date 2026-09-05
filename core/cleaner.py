@@ -368,10 +368,11 @@ def procesar_dataframe(
         if c and c in df.columns
     ]
     if columnas_a_check:
+        # Usar apply por fila para cubrir tanto casos de 1 como varias columnas
         mask_todas_vacias = (
-            df[columnas_a_check].fillna("")
-            .applymap(lambda x: str(x).strip() == "")
-            .all(axis=1)
+            df[columnas_a_check]
+            .fillna("")
+            .apply(lambda row: all(str(x).strip() == "" for x in row), axis=1)
         )
         if mask_todas_vacias.any():
             df = df.loc[~mask_todas_vacias].reset_index(drop=True)

@@ -756,10 +756,11 @@ def render_panel_control(df_procesado: pd.DataFrame) -> pd.DataFrame:
             # Ignorar filas completamente vacías (no tratarlas como 'Campo vacio')
             campos_check = [c for c in ("nombre", "apellido", "mesa", "acompanantes", "menu", "dni") if c in df_save.columns]
             if campos_check:
+                # use row-wise apply to be robust with single-column selections
                 mask_vacias = (
-                    df_save[campos_check].fillna("")
-                    .applymap(lambda x: str(x).strip() == "")
-                    .all(axis=1)
+                    df_save[campos_check]
+                    .fillna("")
+                    .apply(lambda row: all(str(x).strip() == "" for x in row), axis=1)
                 )
                 if mask_vacias.any():
                     df_save = df_save.loc[~mask_vacias]
