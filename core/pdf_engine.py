@@ -72,7 +72,7 @@ def _agrupar_alfabetico(invitados: list[dict[str, Any]]) -> list[dict[str, Any]]
     return grupos
 
 
-def _agrupar_por_mesa(invitados: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _agrupar_por_mesa(invitados: list[dict[str, Any]], orden_mesas: str = "nombre") -> list[dict[str, Any]]:
     """
     Agrupa invitados por número/nombre de mesa, ordenados internamente por apellido.
 
@@ -80,6 +80,8 @@ def _agrupar_por_mesa(invitados: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ----------
     invitados:
         Lista de dicts con al menos ``mesa``.
+    orden_mesas:
+        "nombre" (Mesas primero, luego Livings) o "numero" (1, 2, 3...)
 
     Returns
     -------
@@ -96,18 +98,29 @@ def _agrupar_por_mesa(invitados: list[dict[str, Any]]) -> list[dict[str, Any]]:
             mesas[mesa] = []
         mesas[mesa].append(inv)
 
-    def _clave_natural(texto: str) -> list[Any]:
-        """
-        Clave de ordenamiento natural (human sort).
-        Divide la cadena en fragmentos alfabéticos y numéricos,
-        convirtiendo los numéricos a int para comparación correcta.
-        Ejemplos: "mesa 2" < "mesa 10", "living 1" < "living 10".
-        """
-        partes = re.split(r'(\d+)', texto.lower().strip())
-        return [int(p) if p.isdigit() else p for p in partes]
+    def _clave_nombre(texto: str) -> list[Any]:
+        """Prioriza 'mesa', luego 'living', luego otros. Usa orden natural dentro."""
+        t = texto.lower().strip()
+        if "mesa" in t:
+            pref = 0
+        elif "living" in t:
+            pref = 1
+        else:
+            pref = 2
+        partes = re.split(r'(\d+)', t)
+        return [pref] + [int(p) if p.isdigit() else p for p in partes]
+
+    def _clave_numero(texto: str) -> list[Any]:
+        """Extrae el primer número para ordenar puramente de forma numérica."""
+        t = texto.lower().strip()
+        numeros = re.findall(r'\d+', t)
+        num = int(numeros[0]) if numeros else float('inf')
+        return [num, t]
+
+    clave_sort = _clave_numero if orden_mesas == "numero" else _clave_nombre
 
     grupos: list[dict[str, Any]] = []
-    for mesa in sorted(mesas.keys(), key=_clave_natural):
+    for mesa in sorted(mesas.keys(), key=clave_sort):
         invitados_mesa = sorted(
             mesas[mesa],
             key=lambda x: x.get("orden_alfabetico", "").upper(),
@@ -129,6 +142,7 @@ def generar_pdf(
     metadata_evento: dict[str, str],
     modo: str = "alfabetico",
     salto_pagina_mesas: bool = True,
+    orden_mesas: str = "nombre",
 ) -> bytes:
     """
     Genera un PDF de imprenta en memoria a partir de los datos de invitados.
@@ -188,7 +202,7 @@ def generar_pdf(
     if modo == "alfabetico":
         grupos = _agrupar_alfabetico(datos_invitados)
     else:
-        grupos = _agrupar_por_mesa(datos_invitados)
+        grupos = _agrupar_por_mesa(datos_invitados, orden_mesas=orden_mesas)
 
     # ── Leer CSS embebido ────────────────────────────────────────────────────
     css_path = _TEMPLATES_DIR / "styles.css"

@@ -24,15 +24,18 @@
   --fuente-titulo:  'EB Garamond', Georgia, 'Times New Roman', serif;
   --fuente-cuerpo:  'Inter', 'Helvetica Neue', Arial, sans-serif;
 
-  --tamanio-base:   9pt;
-  --tamanio-letra:  18pt;
-  --tamanio-h1:     28pt;
-  --tamanio-mesa:   16pt;
+  --tamanio-base:   8.5pt;
+  --tamanio-letra:  14pt;
+  --tamanio-h1:     24pt;
+  --tamanio-mesa:   13pt;
 
-  --margen-pagina:  15mm;
-  --espacio-s:      3mm;
-  --espacio-m:      6mm;
-  --espacio-l:      10mm;
+  --margen-arriba:  22mm;
+  --margen-derecha: 10mm;
+  --margen-abajo:   15mm;
+  --margen-izq:     15mm;
+  --espacio-s:      1.5mm;
+  --espacio-m:      3mm;
+  --espacio-l:      5mm;
 }
 
 /* ============================================================================
@@ -41,7 +44,7 @@
 
 @page {
   size: A4 portrait;
-  margin: var(--margen-pagina) var(--margen-pagina) 20mm var(--margen-pagina);
+  margin: var(--margen-arriba) var(--margen-derecha) var(--margen-abajo) var(--margen-izq);
 
   /* Encabezado corriendo en cada página */
   @top-center {
@@ -255,16 +258,17 @@ html, body {
 /* ── MODO ALFABÉTICO: 2 Columnas ──────────────────────────────────────────── */
 
 .columnas-dobles {
-  column-count: 2;
-  column-gap: 8mm;
+  column-count: 3;
+  column-gap: 6mm;
   column-rule: 0.5pt solid var(--color-gris-medio);
   orphans: 3;
   widows: 3;
 }
 
 .bloque-letra {
-  break-inside: avoid-column;
-  margin-bottom: var(--espacio-m);
+  page-break-inside: avoid;
+  break-inside: avoid;
+  margin-bottom: var(--espacio-s);
 }
 
 .separador-letra {
@@ -337,9 +341,18 @@ html, body {
 
 /* ── MODO MESAS ───────────────────────────────────────────────────────────── */
 
+.columnas-mesas {
+  column-count: 3;
+  column-gap: 6mm;
+  column-rule: 0.5pt solid var(--color-gris-medio);
+  orphans: 3;
+  widows: 3;
+}
+
 .bloque-mesa {
+  page-break-inside: avoid;
   break-inside: avoid;
-  margin-bottom: var(--espacio-l);
+  margin-bottom: var(--espacio-s);
 }
 
 .nueva-pagina {
@@ -350,11 +363,11 @@ html, body {
 .encabezado-mesa {
   background: var(--color-primario);
   color: white;
-  padding: 4mm 6mm;
+  padding: 2mm 3mm;
   display: flex;
   align-items: baseline;
-  gap: 4mm;
-  margin-bottom: 4mm;
+  gap: 2mm;
+  margin-bottom: 1mm;
 }
 
 .mesa-etiqueta {
@@ -382,7 +395,7 @@ html, body {
 }
 
 .fila-invitado-mesa {
-  padding: 1.5mm 0;
+  padding: 0.5mm 0;
   border-bottom: 0.3pt solid var(--color-gris-claro);
   break-inside: avoid;
   display: flex;

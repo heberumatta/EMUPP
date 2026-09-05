@@ -829,7 +829,7 @@ def render_exportacion(
     st.markdown("### 📤 Exportar")
 
     # ── Opciones de Exportación ───────────────────────────────────────────────
-    col_filtro, col_modo, col_salto = st.columns([2, 2, 2], gap="medium")
+    col_filtro, col_modo, col_salto, col_orden = st.columns([2, 2, 2, 2], gap="small")
     
     with col_filtro:
         filtro_export = st.selectbox(
@@ -852,11 +852,21 @@ def render_exportacion(
             st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
             salto_pagina = st.checkbox(
                 "Salto de página entre mesas",
-                value=True,
+                value=False,
                 key="chk_salto_pagina",
             )
         else:
             salto_pagina = True
+            
+    with col_orden:
+        orden_mesas_val = "nombre"
+        if modo_key == "mesas":
+            orden_opt = st.selectbox(
+                "Orden de las mesas",
+                options=["Por nombre (Mesas > Livings)", "Por número (1, 2, 3...)"],
+                key="sel_orden_mesas",
+            )
+            orden_mesas_val = "numero" if "número" in orden_opt else "nombre"
 
     # Aplicar el filtro para la exportación
     df_export = df_procesado.copy()
@@ -903,6 +913,7 @@ def render_exportacion(
                             metadata_evento=metadata_evento,
                             modo=modo_key,
                             salto_pagina_mesas=salto_pagina,
+                            orden_mesas=orden_mesas_val,
                         )
                         st.session_state["pdf_bytes"] = pdf_bytes
                         st.session_state["pdf_modo"] = modo_key
