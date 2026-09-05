@@ -303,6 +303,23 @@ def procesar_nombre(texto_crudo: str) -> dict[str, object]:
     }
 
 
+def _normalizar_mesa(texto: str) -> str:
+    """Normaliza el valor de la mesa:
+
+    - Elimina un prefijo tipo "mesa" (case-insensitive) si existe.
+    - Si el valor resultante es numérico, lo devuelve tal cual (ej: "7").
+    - En caso contrario aplica `aplicar_smart_title_case` para formato legible.
+    """
+    if not texto:
+        return ""
+    t = str(texto).strip()
+    # Quitar prefijos como "mesa", "Mesa:", "mesa -", etc.
+    t = re.sub(r'^(mesa[:\.\-\s]+)', '', t, flags=re.IGNORECASE).strip()
+    if re.fullmatch(r"\d+", t):
+        return t
+    return aplicar_smart_title_case(t)
+
+
 # ---------------------------------------------------------------------------
 # Procesamiento de DataFrame completo
 # ---------------------------------------------------------------------------
@@ -351,6 +368,21 @@ def procesar_dataframe(
         DataFrame con columnas: ``nombre``, ``apellido``, ``orden_alfabetico``,
         ``es_dudoso``, ``motivo`` y las columnas opcionales preservadas.
     """
+    # Manejar caso df es None
+    if df is None:
+        columnas_plantilla = [
+            "nombre",
+            "apellido",
+            "orden_alfabetico",
+            "mesa",
+            "acompanantes",
+            "menu",
+            "dni",
+            "es_dudoso",
+            "motivo",
+        ]
+        return pd.DataFrame(columns=columnas_plantilla)
+
     resultados: list[dict[str, object]] = []
     modo_separado = columna_apellido is not None and columna_apellido in df.columns
 
@@ -373,23 +405,6 @@ def procesar_dataframe(
         mask_todas_vacias = subset.apply(lambda col: col.str.strip() == "").all(axis=1)
         if mask_todas_vacias.any():
             df = df.loc[~mask_todas_vacias].reset_index(drop=True)
-
-
-def _normalizar_mesa(texto: str) -> str:
-    """Normaliza el valor de la mesa:
-
-    - Elimina un prefijo tipo "mesa" (case-insensitive) si existe.
-    - Si el valor resultante es numérico, lo devuelve tal cual (ej: "7").
-    - En caso contrario aplica `aplicar_smart_title_case` para formato legible.
-    """
-    if not texto:
-        return ""
-    t = str(texto).strip()
-    # Quitar prefijos como "mesa", "Mesa:", "mesa -", etc.
-    t = re.sub(r'^(mesa[:\.\-\s]+)', '', t, flags=re.IGNORECASE).strip()
-    if re.fullmatch(r"\d+", t):
-        return t
-    return aplicar_smart_title_case(t)
 
     for _, fila in df.iterrows():
 
