@@ -354,6 +354,45 @@ def procesar_dataframe(
     resultados: list[dict[str, object]] = []
     modo_separado = columna_apellido is not None and columna_apellido in df.columns
 
+    # ── Eliminar filas completamente vacías (cuando todas las columnas mapeadas están vacías)
+    columnas_a_check = [
+        c
+        for c in (
+            columna_nombres,
+            columna_apellido,
+            columna_mesa,
+            columna_acompanantes,
+            columna_menu,
+            columna_dni,
+        )
+        if c and c in df.columns
+    ]
+    if columnas_a_check:
+        mask_todas_vacias = (
+            df[columnas_a_check].fillna("")
+            .applymap(lambda x: str(x).strip() == "")
+            .all(axis=1)
+        )
+        if mask_todas_vacias.any():
+            df = df.loc[~mask_todas_vacias].reset_index(drop=True)
+
+
+def _normalizar_mesa(texto: str) -> str:
+    """Normaliza el valor de la mesa:
+
+    - Elimina un prefijo tipo "mesa" (case-insensitive) si existe.
+    - Si el valor resultante es numérico, lo devuelve tal cual (ej: "7").
+    - En caso contrario aplica `aplicar_smart_title_case` para formato legible.
+    """
+    if not texto:
+        return ""
+    t = str(texto).strip()
+    # Quitar prefijos como "mesa", "Mesa:", "mesa -", etc.
+    t = re.sub(r'^(mesa[:\.\-\s]+)', '', t, flags=re.IGNORECASE).strip()
+    if re.fullmatch(r"\d+", t):
+        return t
+    return aplicar_smart_title_case(t)
+
     for _, fila in df.iterrows():
 
         if modo_separado:
@@ -386,7 +425,7 @@ def procesar_dataframe(
             if columna_mesa and columna_mesa in df.columns
             else ""
         )
-        resultado["mesa"] = mesa_str.capitalize() if mesa_str else ""
+        resultado["mesa"] = _normalizar_mesa(mesa_str) if mesa_str else ""
         resultado["acompanantes"] = (
             str(fila[columna_acompanantes]).strip()
             if columna_acompanantes and columna_acompanantes in df.columns

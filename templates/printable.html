@@ -85,7 +85,11 @@
               <span class="inv-apellido">{{ inv.apellido }}</span>{% if inv.apellido and inv.nombre %}, {% endif %}<span class="inv-nombre">{{ inv.nombre }}</span>
             </span>
             {% if inv.mesa %}
-            <span class="inv-mesa">Mesa {{ inv.mesa }}</span>
+              {% if inv.mesa_is_number %}
+                <span class="inv-mesa">Mesa {{ inv.mesa }}</span>
+              {% else %}
+                <span class="inv-mesa">{{ inv.mesa }}</span>
+              {% endif %}
             {% endif %}
             {% if inv.menu %}
             <span class="inv-menu">{{ inv.menu }}</span>
@@ -102,8 +106,12 @@
     {% for grupo in grupos %}
     <div class="bloque-mesa {% if not loop.first and salto_pagina_mesas %}nueva-pagina{% endif %}">
       <div class="encabezado-mesa">
-        <span class="mesa-etiqueta">Mesa</span>
-        <span class="mesa-numero">{{ grupo.mesa }}</span>
+        {% if grupo.mesa_is_number %}
+          <span class="mesa-etiqueta">Mesa</span>
+          <span class="mesa-numero">{{ grupo.mesa }}</span>
+        {% else %}
+          <span class="mesa-etiqueta">{{ grupo.mesa }}</span>
+        {% endif %}
         <span class="mesa-cantidad">{{ grupo.invitados | length }} personas</span>
       </div>
       <ol class="lista-invitados-mesa">

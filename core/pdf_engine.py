@@ -18,7 +18,10 @@ from pathlib import Path
 from typing import Any
 
 import jinja2
-from weasyprint import HTML, CSS
+# Importación de WeasyPrint diferida dentro de `generar_pdf` porque
+# WeasyPrint requiere bibliotecas del sistema (pango/cairo) que pueden
+# no estar presentes en entornos de CI/local sin instalación previa.
+# from weasyprint import HTML, CSS
 
 # ---------------------------------------------------------------------------
 # Rutas
@@ -109,7 +112,9 @@ def _agrupar_por_mesa(invitados: list[dict[str, Any]]) -> list[dict[str, Any]]:
             mesas[mesa],
             key=lambda x: x.get("orden_alfabetico", "").upper(),
         )
-        grupos.append({"mesa": mesa, "invitados": invitados_mesa})
+        # Determinar si la clave de mesa representa un número puro
+        mesa_is_number = bool(re.fullmatch(r"\d+", str(mesa).strip()))
+        grupos.append({"mesa": mesa, "invitados": invitados_mesa, "mesa_is_number": mesa_is_number})
 
     return grupos
 
@@ -173,6 +178,13 @@ def generar_pdf(
     template = env.get_template("printable.html")
 
     # ── Agrupar datos ────────────────────────────────────────────────────────
+    # Normalizar/y añadir banderas útiles para la plantilla
+    import re as _re
+    for inv in datos_invitados:
+        mesa_val = str(inv.get("mesa", "") or "").strip()
+        inv["mesa"] = mesa_val
+        inv["mesa_is_number"] = bool(_re.fullmatch(r"\d+", mesa_val))
+
     if modo == "alfabetico":
         grupos = _agrupar_alfabetico(datos_invitados)
     else:
@@ -194,6 +206,17 @@ def generar_pdf(
     )
 
     # ── Compilar a PDF con WeasyPrint en memoria ─────────────────────────────
+    # Importar WeasyPrint solo cuando sea necesario (runtime). Si falta,
+    # lanzamos un error informativo en vez de romper la importación del módulo.
+    try:
+        from weasyprint import HTML, CSS
+    except Exception as e:  # pragma: no cover - entorno local puede no tener deps
+        raise RuntimeError(
+            "WeasyPrint no está disponible: instala las dependencias del sistema "
+            "requeridas (pango/cairo) y la librería Python 'weasyprint'. "
+            f"Detalle: {e}"
+        )
+
     pdf_buffer = io.BytesIO()
     HTML(string=html_content, base_url=str(_TEMPLATES_DIR)).write_pdf(
         pdf_buffer,

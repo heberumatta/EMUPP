@@ -690,9 +690,13 @@ def render_panel_control(df_procesado: pd.DataFrame) -> pd.DataFrame:
             "Estado",
             df_editor["es_dudoso"].map({True: "⚠️ Dudoso", False: "✅ OK"}),
         )
+    # Añadir columna auxiliar para marcar filas a eliminar desde el editor
+    if "Eliminar" not in df_editor.columns:
+        df_editor.insert(0, "Eliminar", False)
 
     # Configuración de columnas para el editor
     column_config: dict = {
+        "Eliminar": st.column_config.CheckboxColumn("Eliminar", width="small"),
         "Estado": st.column_config.TextColumn("Estado", width="small", disabled=True),
         "nombre": st.column_config.TextColumn("Nombre", width="medium"),
         "apellido": st.column_config.TextColumn("Apellido", width="medium"),
@@ -707,11 +711,12 @@ def render_panel_control(df_procesado: pd.DataFrame) -> pd.DataFrame:
         "motivo": st.column_config.TextColumn("Nota / Motivo", width="large", disabled=True),
     }
 
-    df_editado = st.data_editor(
+        df_editado = st.data_editor(
         df_editor,
         column_config=column_config,
         column_order=[
             "Estado",
+            "Eliminar",
             "es_dudoso",
             "apellido",
             "nombre",
@@ -737,6 +742,27 @@ def render_panel_control(df_procesado: pd.DataFrame) -> pd.DataFrame:
             # Eliminar columna visual antes de guardar
             if "Estado" in df_save.columns:
                 df_save = df_save.drop(columns=["Estado"])
+
+            # Eliminar filas marcadas por el usuario
+            if "Eliminar" in df_save.columns:
+                try:
+                    mask_eliminar = df_save["Eliminar"].astype(bool)
+                except Exception:
+                    mask_eliminar = df_save["Eliminar"] == True
+                if mask_eliminar.any():
+                    df_save = df_save.loc[~mask_eliminar]
+                df_save = df_save.drop(columns=["Eliminar"])
+
+            # Ignorar filas completamente vacías (no tratarlas como 'Campo vacio')
+            campos_check = [c for c in ("nombre", "apellido", "mesa", "acompanantes", "menu", "dni") if c in df_save.columns]
+            if campos_check:
+                mask_vacias = (
+                    df_save[campos_check].fillna("")
+                    .applymap(lambda x: str(x).strip() == "")
+                    .all(axis=1)
+                )
+                if mask_vacias.any():
+                    df_save = df_save.loc[~mask_vacias]
 
             # Recalcular orden_alfabetico
             if "nombre" in df_save.columns and "apellido" in df_save.columns:

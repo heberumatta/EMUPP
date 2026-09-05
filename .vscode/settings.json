@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^python -c \"import sys; sys\\.path\\.insert\\(0, r'c:\\\\Users\\\\rsimo\\\\OneDrive\\\\Desktop\\\\Render Heber\\\\Cosas\\\\Github\\\\EMUPP'\\); import core\\.cleaner as c, core\\.pdf_engine as p; print\\('imports_ok'\\)\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
