@@ -1,4 +1,6 @@
 import sys
-sys.path.insert(0, 'c:/Users/rsimo/OneDrive/Desktop/Render Heber/Cosas/Github/EMUPP')
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 import app
 print('import_ok')

@@ -374,6 +374,7 @@ def render_carga() -> Optional[pd.DataFrame]:
             else:
                 df = pd.read_excel(archivo, dtype=str)
             df = df.fillna("")
+            df = df.replace(r"^(?i:nan|none|null|<na>|nat)$", "", regex=True)
             st.session_state["df_crudo"] = df
             st.success(
                 f"✓ **{archivo.name}** cargado — "
@@ -607,6 +608,14 @@ def render_panel_control(df_procesado: pd.DataFrame) -> pd.DataFrame:
     """
     import re as _re
 
+    # ── Mensaje de confirmación de guardado ──────────────────────────────────
+    if st.session_state.get("mensaje_guardado"):
+        st.success(
+            "✅ **¡Cambios guardados correctamente!** Se ha actualizado la lista de invitados. "
+            "Si deseas descargar un nuevo PDF o Excel, pulsa en los botones correspondientes en la sección inferior de exportación."
+        )
+        st.session_state["mensaje_guardado"] = False
+
     # ── Métricas ──────────────────────────────────────────────────────────────
     total = len(df_procesado)
     dudosos = int(df_procesado["es_dudoso"].sum()) if "es_dudoso" in df_procesado.columns else 0
@@ -744,17 +753,20 @@ def render_panel_control(df_procesado: pd.DataFrame) -> pd.DataFrame:
                 df_save = df_save.drop(columns=["Estado"])
 
             # Eliminar filas marcadas por el usuario
+            indices_eliminar = []
             if "Eliminar" in df_save.columns:
                 try:
                     mask_eliminar = df_save["Eliminar"].astype(bool)
                 except Exception:
                     mask_eliminar = df_save["Eliminar"] == True
                 if mask_eliminar.any():
+                    indices_eliminar = list(df_save.index[mask_eliminar])
                     df_save = df_save.loc[~mask_eliminar]
                 df_save = df_save.drop(columns=["Eliminar"])
 
             # Ignorar filas completamente vacías (no tratarlas como 'Campo vacio')
             campos_check = [c for c in ("nombre", "apellido", "mesa", "acompanantes", "menu", "dni") if c in df_save.columns]
+            indices_vacias = []
             if campos_check:
                 # use row-wise apply to be robust with single-column selections
                 mask_vacias = (
@@ -763,6 +775,7 @@ def render_panel_control(df_procesado: pd.DataFrame) -> pd.DataFrame:
                     .apply(lambda row: all(str(x).strip() == "" for x in row), axis=1)
                 )
                 if mask_vacias.any():
+                    indices_vacias = list(df_save.index[mask_vacias])
                     df_save = df_save.loc[~mask_vacias]
 
             # Recalcular orden_alfabetico
@@ -778,10 +791,26 @@ def render_panel_control(df_procesado: pd.DataFrame) -> pd.DataFrame:
                 # Para todos los que terminan con es_dudoso == False, limpiar motivo
                 df_save.loc[~df_save["es_dudoso"], "motivo"] = "Editado manualmente ✓"
 
-            # Actualizar solo las filas correspondientes en el DataFrame original
+            # Actualizar el DataFrame original: eliminar borradas y actualizar editadas
             df_original = st.session_state["df_procesado"].copy()
-            df_original.loc[df_save.index, df_save.columns] = df_save
-            st.session_state["df_procesado"] = df_original
+            a_eliminar = [idx for idx in (indices_eliminar + indices_vacias) if idx in df_original.index]
+            if a_eliminar:
+                df_original = df_original.drop(index=a_eliminar)
+
+            filas_actualizar = [idx for idx in df_save.index if idx in df_original.index]
+            if filas_actualizar:
+                df_original.loc[filas_actualizar, df_save.columns] = df_save.loc[filas_actualizar]
+
+            # Reemplazar cadenas nulas o 'nan' en el resultado
+            df_original = df_original.replace(r"^(?i:nan|none|null|<na>|nat)$", "", regex=True)
+
+            # Invalidar PDF generado previamente para forzar la regeneración con los nuevos datos
+            if "pdf_bytes" in st.session_state:
+                del st.session_state["pdf_bytes"]
+
+            st.session_state["df_procesado"] = df_original.reset_index(drop=True)
+            st.session_state["mensaje_guardado"] = True
+            st.toast("✅ ¡Cambios guardados con éxito!", icon="💾")
             st.rerun()
 
     with col_save_info:
@@ -829,36 +858,37 @@ def render_exportacion(
     st.markdown("### 📤 Exportar")
 
     # ── Opciones de Exportación ───────────────────────────────────────────────
-    col_filtro, col_modo, col_salto, col_orden = st.columns([2, 2, 2, 2], gap="small")
-    
+    col_filtro, col_modo, col_cols, col_extra = st.columns([2, 2, 2, 2], gap="small")
+
     with col_filtro:
         filtro_export = st.selectbox(
             "Filtrar invitados a exportar",
             options=["Todos", "Solo dudosos", "Solo confirmados"],
             key="filtro_export",
         )
-    
+
     with col_modo:
         modo_pdf = st.radio(
             "Modo del PDF",
-            options=["Alfabético (2 columnas)", "Por Mesas"],
+            options=["Alfabético", "Por Mesas"],
             horizontal=True,
             key="radio_modo_pdf",
         )
-        
-    with col_salto:
-        modo_key = "alfabetico" if "Alfabético" in modo_pdf else "mesas"
-        if modo_key == "mesas":
-            st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
-            salto_pagina = st.checkbox(
-                "Salto de página entre mesas",
-                value=False,
-                key="chk_salto_pagina",
-            )
-        else:
-            salto_pagina = True
-            
-    with col_orden:
+        modo_key = "alfabetico" if modo_pdf == "Alfabético" else "mesas"
+
+    with col_cols:
+        num_columnas = st.selectbox(
+            "Columnas por hoja",
+            options=[1, 2, 3, 4],
+            index=2,  # 3 columnas por defecto (el estándar habitual)
+            format_func=lambda x: f"{x} {'columna' if x == 1 else 'columnas'}"
+            + (" (Recomendado)" if x == 3 else (" (Compacto)" if x == 4 else "")),
+            key="sel_num_columnas",
+            help="3 columnas es el estándar habitual para optimizar el número de hojas manteniendo excelente legibilidad.",
+        )
+
+    with col_extra:
+        salto_pagina = True
         orden_mesas_val = "nombre"
         if modo_key == "mesas":
             orden_opt = st.selectbox(
@@ -867,9 +897,24 @@ def render_exportacion(
                 key="sel_orden_mesas",
             )
             orden_mesas_val = "numero" if "número" in orden_opt else "nombre"
+            salto_pagina = st.checkbox(
+                "Salto de página por mesa",
+                value=False,
+                key="chk_salto_pagina",
+            )
+            incluir_portada = False
+        else:
+            st.markdown("<div style='margin-top: 1.6rem;'></div>", unsafe_allow_html=True)
+            incluir_portada = st.checkbox(
+                "Incluir portada independiente",
+                value=True,
+                key="chk_incluir_portada",
+                help="Desmarca esta opción si deseas que el listado comience directamente en la primera página con un encabezado compacto (ahorra una hoja de papel).",
+            )
 
     # Aplicar el filtro para la exportación
     df_export = df_procesado.copy()
+    df_export = df_export.replace(r"^(?i:nan|none|null|<na>|nat)$", "", regex=True)
     if filtro_export == "Solo dudosos" and "es_dudoso" in df_export.columns:
         df_export = df_export[df_export["es_dudoso"]]
     elif filtro_export == "Solo confirmados" and "es_dudoso" in df_export.columns:
@@ -914,9 +959,12 @@ def render_exportacion(
                             modo=modo_key,
                             salto_pagina_mesas=salto_pagina,
                             orden_mesas=orden_mesas_val,
+                            columnas=num_columnas,
+                            incluir_portada=incluir_portada,
                         )
                         st.session_state["pdf_bytes"] = pdf_bytes
                         st.session_state["pdf_modo"] = modo_key
+                        st.session_state["pdf_cols"] = num_columnas
                         st.success("PDF generado correctamente.")
                     except Exception as e:
                         st.error(f"Error generando PDF: {e}")
@@ -935,11 +983,13 @@ def render_exportacion(
         total = len(df_export)
         dudosos = int(df_export["es_dudoso"].sum()) if "es_dudoso" in df_export.columns else 0
         salto_txt = "con salto de página" if salto_pagina else "continuo (sin saltos)"
+        portada_txt = "con portada" if incluir_portada else "directo (ahorro de hojas)"
+        modo_desc = f"alfabético ({num_columnas} cols, {portada_txt})" if modo_key == "alfabetico" else f"por mesas ({salto_txt}, {num_columnas} cols)"
         st.markdown(
             f"""
             <div style="font-size:0.82rem; color:rgba(255,255,255,0.5); padding-top:1.8rem;">
             📋 Se exportarán <b style="color:#c9a84c">{total}</b> invitados en modo
-            <b style="color:#c9a84c">{"alfabético" if modo_key=="alfabetico" else f"por mesas ({salto_txt})"}</b>.
+            <b style="color:#c9a84c">{modo_desc}</b>.
             {"<br>⚠️ Aún hay <b style='color:#f0ad4e'>" + str(dudosos) + "</b> entrada(s) dudosa(s) sin revisar." if dudosos > 0 else ""}
             </div>
             """,

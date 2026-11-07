@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import io
 import os
+import re
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -31,13 +33,47 @@ _TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 
 
 # ---------------------------------------------------------------------------
-# Funciones auxiliares de agrupación
+# Funciones auxiliares de agrupación y ordenación
 # ---------------------------------------------------------------------------
+
+
+def _remover_diacriticos(texto: str) -> str:
+    """Remueve marcas diacríticas (acentos, diéresis) pero preserva la 'Ñ'."""
+    t = texto.replace("ñ", "###enie_min###").replace("Ñ", "###enie_may###")
+    t_decomp = "".join(
+        c for c in unicodedata.normalize("NFD", t) if not unicodedata.combining(c)
+    )
+    return t_decomp.replace("###enie_min###", "ñ").replace("###enie_may###", "Ñ")
+
+
+def _clave_alfabetica(invitado: dict[str, Any]) -> str:
+    """
+    Clave de ordenación para nombres en español.
+    Unifica acentuadas (Á->A) y posiciona Ñ tras N para orden alfabético correcto.
+    """
+    texto = (
+        invitado.get("orden_alfabetico", "")
+        or invitado.get("apellido", "")
+        or invitado.get("nombre", "")
+    )
+    texto_norm = _remover_diacriticos(str(texto)).upper().strip()
+    return texto_norm.replace("Ñ", "N~")
+
+
+def _obtener_letra_grupo(invitado: dict[str, Any]) -> str:
+    """Extrae la primera letra normalizada para encabezado de grupo (A-Z, Ñ, o #)."""
+    apellido = str(
+        invitado.get("apellido", "") or invitado.get("nombre", "") or ""
+    ).strip()
+    if not apellido:
+        return "#"
+    primera = _remover_diacriticos(apellido[0]).upper()
+    return primera if (primera.isalpha() or primera == "Ñ") else "#"
 
 
 def _agrupar_alfabetico(invitados: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
-    Agrupa y ordena invitados por letra inicial del apellido.
+    Agrupa y ordena invitados alfabéticamente por apellido según reglas en español.
 
     Parameters
     ----------
@@ -49,22 +85,16 @@ def _agrupar_alfabetico(invitados: list[dict[str, Any]]) -> list[dict[str, Any]]
     list[dict]
         Lista de grupos: ``{"letra": str, "invitados": list[dict]}``.
     """
-    # Ordenar por campo orden_alfabetico (apellido, nombre)
-    ordenados = sorted(
-        invitados,
-        key=lambda x: x.get("orden_alfabetico", "").upper(),
-    )
+    # Ordenar considerando reglas de español (A=Á, N < Ñ < O)
+    ordenados = sorted(invitados, key=_clave_alfabetica)
 
     grupos: list[dict[str, Any]] = []
     letra_actual: str = ""
 
     for inv in ordenados:
-        apellido = inv.get("apellido", "") or inv.get("nombre", "")
-        # Obtener primera letra significativa (ignorar artículos iniciales)
-        primera_letra = apellido[0].upper() if apellido else "#"
-
-        if primera_letra != letra_actual:
-            letra_actual = primera_letra
+        letra = _obtener_letra_grupo(inv)
+        if letra != letra_actual:
+            letra_actual = letra
             grupos.append({"letra": letra_actual, "invitados": []})
 
         grupos[-1]["invitados"].append(inv)
@@ -99,9 +129,11 @@ def _agrupar_por_mesa(invitados: list[dict[str, Any]], orden_mesas: str = "nombr
         mesas[mesa].append(inv)
 
     def _clave_nombre(texto: str) -> list[Any]:
-        """Prioriza 'mesa', luego 'living', luego otros. Usa orden natural dentro."""
+        """Prioriza 'mesa', luego 'living', luego otros, y 'sin mesa' al final. Usa orden natural dentro."""
         t = texto.lower().strip()
-        if "mesa" in t:
+        if "sin mesa" in t or "sin asignar" in t:
+            pref = 3
+        elif "mesa" in t:
             pref = 0
         elif "living" in t:
             pref = 1
@@ -143,6 +175,8 @@ def generar_pdf(
     modo: str = "alfabetico",
     salto_pagina_mesas: bool = True,
     orden_mesas: str = "nombre",
+    columnas: int = 3,
+    incluir_portada: bool = True,
 ) -> bytes:
     """
     Genera un PDF de imprenta en memoria a partir de los datos de invitados.
@@ -157,11 +191,19 @@ def generar_pdf(
         Diccionario con metadatos del evento:
         ``{"nombre_evento": str, "fecha": str, "lugar": str}``.
     modo:
-        ``"alfabetico"`` para listado A-Z en 2 columnas, o
-        ``"mesas"`` para listado por mesa con salto de página entre mesas.
+        ``"alfabetico"`` para listado A-Z en columnas, o
+        ``"mesas"`` para listado por mesa.
     salto_pagina_mesas:
         Si es True (defecto), inserta un salto de página entre cada mesa
         en modo ``"mesas"``. Si es False, las mesas se listan de forma continua.
+    orden_mesas:
+        "nombre" o "numero" para ordenar las mesas.
+    columnas:
+        Cantidad de columnas por página (1, 2, 3 o 4). Por defecto 3.
+    incluir_portada:
+        Si es True (defecto), genera una carátula / portada formal en la primera hoja.
+        Si es False, el listado comienza directamente en la primera hoja con encabezado
+        compacto para minimizar hojas.
 
     Returns
     -------
@@ -171,12 +213,15 @@ def generar_pdf(
     Raises
     ------
     ValueError
-        Si ``modo`` no es ``"alfabetico"`` ni ``"mesas"``.
+        Si ``modo`` no es ``"alfabetico"`` ni ``"mesas"``, o ``columnas`` no es válido.
     FileNotFoundError
         Si no se encuentran los templates de Jinja2.
     """
     if modo not in ("alfabetico", "mesas"):
         raise ValueError(f"Modo inválido: '{modo}'. Use 'alfabetico' o 'mesas'.")
+
+    if columnas not in (1, 2, 3, 4):
+        columnas = 3
 
     # ── Cargar entorno Jinja2 ────────────────────────────────────────────────
     if not _TEMPLATES_DIR.exists():
@@ -192,12 +237,22 @@ def generar_pdf(
     template = env.get_template("printable.html")
 
     # ── Agrupar datos ────────────────────────────────────────────────────────
-    # Normalizar/y añadir banderas útiles para la plantilla
-    import re as _re
+    def _limpiar_campo(val: Any) -> str:
+        if val is None:
+            return ""
+        s = str(val).strip()
+        if s.lower() in ("nan", "none", "null", "<na>", "nat"):
+            return ""
+        return s
+
+    # Normalizar y añadir banderas útiles para la plantilla
     for inv in datos_invitados:
-        mesa_val = str(inv.get("mesa", "") or "").strip()
+        mesa_val = _limpiar_campo(inv.get("mesa", ""))
         inv["mesa"] = mesa_val
-        inv["mesa_is_number"] = bool(_re.fullmatch(r"\d+", mesa_val))
+        inv["mesa_is_number"] = bool(re.fullmatch(r"\d+", mesa_val))
+        inv["menu"] = _limpiar_campo(inv.get("menu", ""))
+        inv["acompanantes"] = _limpiar_campo(inv.get("acompanantes", ""))
+        inv["dni"] = _limpiar_campo(inv.get("dni", ""))
 
     if modo == "alfabetico":
         grupos = _agrupar_alfabetico(datos_invitados)
@@ -216,14 +271,14 @@ def generar_pdf(
         modo=modo,
         salto_pagina_mesas=salto_pagina_mesas,
         total_invitados=total_invitados,
+        columnas=columnas,
+        incluir_portada=incluir_portada,
         css_content=css_content,
     )
 
     # ── Compilar a PDF con WeasyPrint en memoria ─────────────────────────────
-    # Importar WeasyPrint solo cuando sea necesario (runtime). Si falta,
-    # lanzamos un error informativo en vez de romper la importación del módulo.
     try:
-        from weasyprint import HTML, CSS
+        from weasyprint import HTML
     except Exception as e:  # pragma: no cover - entorno local puede no tener deps
         raise RuntimeError(
             "WeasyPrint no está disponible: instala las dependencias del sistema "
@@ -234,7 +289,6 @@ def generar_pdf(
     pdf_buffer = io.BytesIO()
     HTML(string=html_content, base_url=str(_TEMPLATES_DIR)).write_pdf(
         pdf_buffer,
-        stylesheets=[CSS(string=css_content)],
     )
     pdf_buffer.seek(0)
     return pdf_buffer.read()

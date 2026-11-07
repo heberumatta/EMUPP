@@ -3,44 +3,35 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Lista de invitados para {{ evento.nombre_evento }}" />
+  <meta name="author" content="EMUPP" />
   <title>Lista de Invitados — {{ evento.nombre_evento }}</title>
   <style>
-    {{ css_content }}
+    {{ css_content | safe }}
   </style>
 </head>
 <body>
 
   <!-- ══════════════════════════════════════════════════════════════════════
-       ENCABEZADO GLOBAL (se repite en cada página via CSS @page running)
+       ENCABEZADO Y PIE GLOBALES (CSS Paged Media running elements)
   ══════════════════════════════════════════════════════════════════════ -->
-  <div id="encabezado-pagina">
-    <div class="encabezado-inner">
-      <div class="encabezado-evento">
-        <span class="encabezado-titulo">{{ evento.nombre_evento }}</span>
-        {% if evento.lugar %}
-        <span class="encabezado-sep">·</span>
-        <span class="encabezado-lugar">{{ evento.lugar }}</span>
-        {% endif %}
-      </div>
-      <div class="encabezado-fecha">
-        {% if evento.lugar and evento.fecha %}<span class="encabezado-sep encabezado-sep-fecha">·</span>{% endif %}
-        {{ evento.fecha }}
-      </div>
-    </div>
+  <div id="header-left">
+    <span class="encabezado-titulo">{{ evento.nombre_evento or 'Lista de Invitados' }}</span>
+  </div>
+  {% if evento.fecha or evento.lugar %}
+  <div id="header-right">
+    <span>{{ evento.fecha or evento.lugar }}</span>
+  </div>
+  {% endif %}
+  <div id="footer-left">
+    <span>{{ total_invitados }} invitados</span>
   </div>
 
+  {% if incluir_portada %}
   <!-- ══════════════════════════════════════════════════════════════════════
-       PIE DE PÁGINA (se repite en cada página via CSS @page running)
+       PORTADA INDEPENDIENTE (opcional para encuadernación formal)
   ══════════════════════════════════════════════════════════════════════ -->
-  <div id="pie-pagina">
-    <span class="pie-total">{{ total_invitados }} invitados</span>
-    <span class="pie-paginas">Página <span class="numero-pagina"></span> de <span class="total-paginas"></span></span>
-  </div>
-
-  <!-- ══════════════════════════════════════════════════════════════════════
-       PORTADA / TÍTULO PRINCIPAL
-  ══════════════════════════════════════════════════════════════════════ -->
-  <div class="portada">
+  <header class="portada">
     <div class="portada-linea-decorativa"></div>
     <h1 class="portada-titulo">Lista de Invitados</h1>
     <p class="portada-evento">{{ evento.nombre_evento }}</p>
@@ -65,47 +56,76 @@
     <p class="portada-modo-label">
       {% if modo == 'alfabetico' %}Ordenado alfabéticamente{% else %}Organizado por mesas{% endif %}
     </p>
-  </div><!-- .portada -->
+  </header><!-- .portada -->
+  {% else %}
+  <!-- ══════════════════════════════════════════════════════════════════════
+       ENCABEZADO COMPACTO DE PRIMERA PÁGINA (Ahorro máximo de hojas)
+  ══════════════════════════════════════════════════════════════════════ -->
+  <header class="encabezado-hoja-directa">
+    <h1 class="titulo-directo">Lista de Invitados</h1>
+    <p class="evento-directo">{{ evento.nombre_evento }}</p>
+    <div class="sub-directo">
+      {% if evento.fecha %}<span>{{ evento.fecha }}</span>{% endif %}
+      {% if evento.lugar %}<span class="sep">·</span><span>{{ evento.lugar }}</span>{% endif %}
+      <span class="sep">·</span><span>{{ total_invitados }} invitados</span>
+      <span class="sep">·</span><span>{% if modo == 'alfabetico' %}{{ columnas }} columnas{% else %}{{ grupos | length }} mesas{% endif %}</span>
+    </div>
+    <div class="linea-compacta"></div>
+  </header>
+  {% endif %}
 
   <!-- ══════════════════════════════════════════════════════════════════════
        CONTENIDO PRINCIPAL
   ══════════════════════════════════════════════════════════════════════ -->
-  <div class="contenido-principal">
+  <main class="contenido-principal">
+
+    {% macro render_invitado(inv) %}
+    <li class="fila-invitado {% if inv.es_dudoso %}fila-dudosa{% endif %}">
+      <span class="inv-nombre-completo">
+        <span class="inv-apellido">{{ inv.apellido }}</span>{% if inv.apellido and inv.nombre %}, {% endif %}<span class="inv-nombre">{{ inv.nombre }}</span>
+      </span>
+      {% if inv.mesa %}
+        {% if inv.mesa_is_number %}
+          <span class="inv-mesa">Mesa {{ inv.mesa }}</span>
+        {% else %}
+          <span class="inv-mesa">{{ inv.mesa }}</span>
+        {% endif %}
+      {% endif %}
+      {% if inv.menu and inv.menu | lower not in ['nan', 'none', 'null', ''] %}
+      <span class="inv-menu">{{ inv.menu }}</span>
+      {% endif %}
+    </li>
+    {% endmacro %}
 
     {% if modo == 'alfabetico' %}
-    <!-- ── MODO ALFABÉTICO: 2 columnas con separadores de letra ──────── -->
-    <div class="columnas-dobles">
+    <!-- ── MODO ALFABÉTICO: Columnas dinámicas con flujo continuo ──────── -->
+    <div class="columnas-invitados col-count-{{ columnas }}">
       {% for grupo in grupos %}
-      <div class="bloque-letra">
-        <div class="separador-letra">{{ grupo.letra }}</div>
+      <section class="bloque-letra">
+        <div class="bloque-inicio-letra">
+          <div class="separador-letra">{{ grupo.letra }}</div>
+          {% if grupo.invitados | length > 0 %}
+          <ul class="lista-invitados">
+            {{ render_invitado(grupo.invitados[0]) }}
+          </ul>
+          {% endif %}
+        </div><!-- .bloque-inicio-letra -->
+        {% if grupo.invitados | length > 1 %}
         <ul class="lista-invitados">
-          {% for inv in grupo.invitados %}
-          <li class="fila-invitado {% if inv.es_dudoso %}fila-dudosa{% endif %}">
-            <span class="inv-nombre-completo">
-              <span class="inv-apellido">{{ inv.apellido }}</span>{% if inv.apellido and inv.nombre %}, {% endif %}<span class="inv-nombre">{{ inv.nombre }}</span>
-            </span>
-            {% if inv.mesa %}
-              {% if inv.mesa_is_number %}
-                <span class="inv-mesa">Mesa {{ inv.mesa }}</span>
-              {% else %}
-                <span class="inv-mesa">{{ inv.mesa }}</span>
-              {% endif %}
-            {% endif %}
-            {% if inv.menu %}
-            <span class="inv-menu">{{ inv.menu }}</span>
-            {% endif %}
-          </li>
+          {% for inv in grupo.invitados[1:] %}
+          {{ render_invitado(inv) }}
           {% endfor %}
         </ul>
-      </div><!-- .bloque-letra -->
+        {% endif %}
+      </section><!-- .bloque-letra -->
       {% endfor %}
-    </div><!-- .columnas-dobles -->
+    </div><!-- .columnas-invitados -->
 
     {% else %}
-    <!-- ── MODO POR MESAS: Salto de página entre mesas ──────────────── -->
-    <div class="columnas-mesas">
+    <!-- ── MODO POR MESAS ────────────────────────────────────────────── -->
+    <div class="columnas-mesas {% if not salto_pagina_mesas %}col-count-{{ columnas }}{% else %}col-count-1{% endif %}">
       {% for grupo in grupos %}
-      <div class="bloque-mesa {% if not loop.first and salto_pagina_mesas %}nueva-pagina{% endif %}">
+      <section class="bloque-mesa {% if not loop.first and salto_pagina_mesas %}nueva-pagina{% endif %}">
         <div class="encabezado-mesa">
           {% if grupo.mesa_is_number %}
             <span class="mesa-etiqueta">Mesa</span>
@@ -120,22 +140,22 @@
               <span class="inv-nombre-principal">
                 {{ inv.nombre }} {{ inv.apellido }}
               </span>
-              {% if inv.acompanantes %}
+              {% if inv.acompanantes and inv.acompanantes | lower not in ['nan', 'none', 'null', '', '0'] %}
               <span class="inv-acompanantes">+ {{ inv.acompanantes }} acompañante(s)</span>
               {% endif %}
             </div>
-            {% if inv.menu %}
+            {% if inv.menu and inv.menu | lower not in ['nan', 'none', 'null', ''] %}
             <span class="inv-menu-badge">{{ inv.menu }}</span>
             {% endif %}
           </li>
           {% endfor %}
         </ol>
-      </div><!-- .bloque-mesa -->
+      </section><!-- .bloque-mesa -->
       {% endfor %}
     </div><!-- .columnas-mesas -->
     {% endif %}
 
-  </div><!-- .contenido-principal -->
+  </main><!-- .contenido-principal -->
 
 </body>
 </html>

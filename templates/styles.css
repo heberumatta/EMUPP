@@ -1,13 +1,9 @@
 /* ============================================================================
-   styles.css — CSS de Imprenta para Event Guest Manager
-   Diseñado para papel A4 vertical, 2 columnas, tipografía editorial sobria.
-   Usa CSS Paged Media (@page) compatible con WeasyPrint.
+   styles.css — CSS de Imprenta para Event Guest Manager (EMUPP)
+   Diseñado para papel A4 vertical, soporte dinámico de 1 a 4 columnas,
+   tipografía editorial sobria y optimización de flujo continuo de invitados.
+   Compatible con WeasyPrint (CSS Paged Media).
    ============================================================================ */
-
-/* ── Importar tipografía ── */
-/* WeasyPrint no carga fuentes web externas por defecto,
-   por eso usamos la familia de sistema más cercana. */
-@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;600&family=Inter:wght@300;400;600&display=swap');
 
 /* ── Variables de diseño ──────────────────────────────────────────────────── */
 :root {
@@ -21,18 +17,19 @@
   --color-dudoso:       #fff3cd;
   --color-dudoso-borde: #f0ad4e;
 
-  --fuente-titulo:  'EB Garamond', Georgia, 'Times New Roman', serif;
-  --fuente-cuerpo:  'Inter', 'Helvetica Neue', Arial, sans-serif;
+  /* Pila tipográfica local y editorial para máxima rapidez, nitidez y compatibilidad */
+  --fuente-titulo:  'Cinzel', 'EB Garamond', 'Baskerville', 'Georgia', 'Liberation Serif', 'DejaVu Serif', 'Times New Roman', serif;
+  --fuente-cuerpo:  'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, 'Liberation Sans', 'DejaVu Sans', sans-serif;
 
-  --tamanio-base:   8.5pt;
-  --tamanio-letra:  14pt;
-  --tamanio-h1:     24pt;
-  --tamanio-mesa:   13pt;
+  --tamanio-base:   8pt;
+  --tamanio-letra:  12pt;
+  --tamanio-h1:     22pt;
+  --tamanio-mesa:   12pt;
 
   --margen-arriba:  22mm;
   --margen-derecha: 10mm;
   --margen-abajo:   15mm;
-  --margen-izq:     15mm;
+  --margen-izq:     12mm;
   --espacio-s:      1.5mm;
   --espacio-m:      3mm;
   --espacio-l:      5mm;
@@ -46,25 +43,62 @@
   size: A4 portrait;
   margin: var(--margen-arriba) var(--margen-derecha) var(--margen-abajo) var(--margen-izq);
 
-  /* Encabezado corriendo en cada página */
-  @top-center {
-    content: element(encabezado-corriente);
+  /* Encabezado continuo con cajas estándar W3C Paged Media */
+  @top-left {
+    content: element(header-left);
+    vertical-align: bottom;
+    padding-bottom: 2mm;
     border-bottom: 0.5pt solid var(--color-gris-medio);
-    padding-bottom: 3mm;
   }
 
-  /* Pie con numeración */
-  @bottom-center {
-    content: element(pie-corriente);
+  @top-center {
+    content: '';
+    vertical-align: bottom;
+    padding-bottom: 2mm;
+    border-bottom: 0.5pt solid var(--color-gris-medio);
+  }
+
+  @top-right {
+    content: element(header-right);
+    vertical-align: bottom;
+    padding-bottom: 2mm;
+    border-bottom: 0.5pt solid var(--color-gris-medio);
+  }
+
+  /* Pie de página con numeración continua */
+  @bottom-left {
+    content: element(footer-left);
+    vertical-align: top;
+    padding-top: 2mm;
     border-top: 0.5pt solid var(--color-gris-medio);
-    padding-top: 3mm;
+  }
+
+  @bottom-center {
+    content: '';
+    vertical-align: top;
+    padding-top: 2mm;
+    border-top: 0.5pt solid var(--color-gris-medio);
+  }
+
+  @bottom-right {
+    content: 'Página ' counter(page) ' de ' counter(pages);
+    vertical-align: top;
+    padding-top: 2mm;
+    border-top: 0.5pt solid var(--color-gris-medio);
+    font-family: var(--fuente-cuerpo);
+    font-size: 7.2pt;
+    color: var(--color-gris-texto);
   }
 }
 
 @page:first {
-  /* La portada no lleva encabezado ni pie */
+  /* Si hay portada independiente, no lleva encabezado ni pie en la página 1 */
+  @top-left { content: none; }
   @top-center { content: none; }
+  @top-right { content: none; }
+  @bottom-left { content: none; }
   @bottom-center { content: none; }
+  @bottom-right { content: none; }
 }
 
 /* ── Contadores de página ──────────────────────────────────────────────────── */
@@ -91,70 +125,57 @@ html, body {
   font-size: var(--tamanio-base);
   color: var(--color-primario);
   background: white;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
 }
 
 /* ============================================================================
-   ENCABEZADO Y PIE CORRIENTES (positioned as running elements)
+   ENCABEZADO Y PIE CORRIENTES (elementos en running)
    ============================================================================ */
 
-#encabezado-pagina {
-  position: running(encabezado-corriente);
-  width: 100%;
-}
-
-.encabezado-inner {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 6mm;
-  font-size: 7.5pt;
-  color: var(--color-gris-texto);
-  padding-bottom: 2mm;
-}
-
-.encabezado-sep-fecha {
-  margin-right: 2mm;
-}
-
-.encabezado-titulo {
+#header-left {
+  position: running(header-left);
   font-family: var(--fuente-titulo);
   font-weight: 600;
-  font-size: 9pt;
+  font-size: 8.5pt;
   color: var(--color-primario);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
-.encabezado-sep {
-  margin: 0 3mm;
+#header-left .sep {
+  margin: 0 1.5mm;
   color: var(--color-gris-medio);
+  font-weight: normal;
 }
 
-.encabezado-lugar {
+#header-left .lugar {
+  font-family: var(--fuente-cuerpo);
+  font-size: 7.5pt;
   font-style: italic;
+  color: var(--color-gris-texto);
+  text-transform: none;
+  letter-spacing: 0;
 }
 
-.encabezado-fecha {
+#header-right {
+  position: running(header-right);
+  font-family: var(--fuente-cuerpo);
+  font-size: 7.5pt;
+  color: var(--color-gris-texto);
+  white-space: nowrap;
   text-align: right;
 }
 
-#pie-pagina {
-  position: running(pie-corriente);
-  width: 100%;
-}
-
-#pie-pagina {
-  display: flex;
-  justify-content: space-between;
-  font-size: 7pt;
+#footer-left {
+  position: running(footer-left);
+  font-family: var(--fuente-cuerpo);
+  font-size: 7.2pt;
   color: var(--color-gris-texto);
-  padding-top: 2mm;
+  white-space: nowrap;
 }
 
 /* ============================================================================
-   PORTADA
+   PORTADA INDEPENDIENTE (OPCIONAL)
    ============================================================================ */
 
 .portada {
@@ -170,36 +191,36 @@ html, body {
 }
 
 .portada-linea-decorativa {
-  width: 60mm;
+  width: 50mm;
   height: 1pt;
   background: var(--color-dorado);
-  margin: 8mm auto;
+  margin: 6mm auto;
 }
 
 .portada-titulo {
   font-family: var(--fuente-titulo);
   font-size: var(--tamanio-h1);
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   color: var(--color-primario);
-  margin-bottom: 4mm;
+  margin-bottom: 3mm;
 }
 
 .portada-evento {
   font-family: var(--fuente-titulo);
-  font-size: 20pt;
+  font-size: 19pt;
   color: var(--color-dorado);
   margin-bottom: 3mm;
 }
 
 .portada-fecha {
-  font-size: 11pt;
+  font-size: 10.5pt;
   color: var(--color-gris-texto);
   margin-bottom: 2mm;
 }
 
 .portada-lugar {
-  font-size: 10pt;
+  font-size: 9.5pt;
   font-style: italic;
   color: var(--color-gris-texto);
 }
@@ -209,7 +230,7 @@ html, body {
   align-items: center;
   justify-content: center;
   gap: 10mm;
-  margin: 8mm 0 4mm;
+  margin: 6mm 0 3mm;
 }
 
 .stat-item {
@@ -220,7 +241,7 @@ html, body {
 
 .stat-numero {
   font-family: var(--fuente-titulo);
-  font-size: 24pt;
+  font-size: 22pt;
   font-weight: 600;
   color: var(--color-primario);
   line-height: 1;
@@ -229,46 +250,129 @@ html, body {
 .stat-label {
   font-size: 7pt;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.04em;
   color: var(--color-gris-texto);
   margin-top: 1mm;
 }
 
 .stat-sep {
-  font-size: 20pt;
+  font-size: 18pt;
   color: var(--color-gris-medio);
 }
 
 .portada-modo-label {
   font-size: 8pt;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.04em;
   color: var(--color-gris-texto);
   margin-top: 2mm;
 }
 
 /* ============================================================================
-   CONTENIDO PRINCIPAL
+   ENCABEZADO COMPACTO DE PRIMERA PÁGINA (SIN PORTADA)
+   ============================================================================ */
+
+.encabezado-hoja-directa {
+  text-align: center;
+  margin-top: 1mm;
+  margin-bottom: 4mm;
+  padding-bottom: 2mm;
+  border-bottom: 0.5pt solid var(--color-gris-medio);
+}
+
+.encabezado-hoja-directa .linea-compacta {
+  width: 40mm;
+  height: 0.8pt;
+  background: var(--color-dorado);
+  margin: 2.5mm auto;
+}
+
+.titulo-directo {
+  font-family: var(--fuente-titulo);
+  font-size: 15pt;
+  font-weight: 600;
+  color: var(--color-primario);
+  letter-spacing: 0.02em;
+}
+
+.evento-directo {
+  font-family: var(--fuente-titulo);
+  font-size: 12.5pt;
+  color: var(--color-dorado);
+  margin: 1mm 0;
+}
+
+.sub-directo {
+  font-size: 7.5pt;
+  color: var(--color-gris-texto);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2mm;
+  flex-wrap: wrap;
+}
+
+.sub-directo .sep {
+  color: var(--color-gris-medio);
+}
+
+/* ============================================================================
+   CONTENIDO PRINCIPAL Y COLUMNAS DINÁMICAS
    ============================================================================ */
 
 .contenido-principal {
   margin-top: 0;
 }
 
-/* ── MODO ALFABÉTICO: 2 Columnas ──────────────────────────────────────────── */
-
-.columnas-dobles {
-  column-count: 3;
-  column-gap: 6mm;
+/* Reglas comunes de columnas */
+.columnas-invitados {
   column-rule: 0.5pt solid var(--color-gris-medio);
-  orphans: 3;
-  widows: 3;
+  orphans: 2;
+  widows: 2;
 }
 
+/* 1 columna */
+.col-count-1 {
+  column-count: 1;
+  column-gap: 0;
+  font-size: 9pt;
+}
+
+/* 2 columnas */
+.col-count-2 {
+  column-count: 2;
+  column-gap: 8mm;
+  font-size: 8.5pt;
+}
+
+/* 3 columnas (habitual y recomendado) */
+.col-count-3 {
+  column-count: 3;
+  column-gap: 5mm;
+  font-size: 7.8pt;
+}
+
+/* 4 columnas (ultra compacto para minimizar hojas) */
+.col-count-4 {
+  column-count: 4;
+  column-gap: 3.5mm;
+  font-size: 7pt;
+}
+
+/* ── Bloque de letra (FLUJO CONTINUO ENTRE COLUMNAS) ─────────────────────── */
+/* Se elimina 'break-inside: avoid' para que los invitados de una letra fluyan */
+/* de una columna a otra sin forzar saltos prematuros que dejen espacio vacío. */
 .bloque-letra {
-  page-break-inside: avoid;
-  break-inside: avoid;
+  break-inside: auto;
+  page-break-inside: auto;
   margin-bottom: var(--espacio-s);
+}
+
+/* Enlace indivisible entre separador de letra y primer invitado para */
+/* evitar títulos de letra dorados huérfanos al fondo de una columna. */
+.bloque-inicio-letra {
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 
 .separador-letra {
@@ -276,11 +380,22 @@ html, body {
   font-size: var(--tamanio-letra);
   font-weight: 600;
   color: var(--color-dorado);
-  border-bottom: 1pt solid var(--color-dorado-suave);
-  margin-bottom: 2mm;
-  padding-bottom: 1mm;
+  border-bottom: 0.8pt solid var(--color-dorado-suave);
+  margin-top: 1.8mm;
+  margin-bottom: 1.2mm;
+  padding-bottom: 0.4mm;
   line-height: 1;
   break-after: avoid;
+  page-break-after: avoid;
+  break-inside: avoid;
+}
+
+.col-count-3 .separador-letra,
+.col-count-4 .separador-letra {
+  font-size: 10.5pt;
+  margin-top: 1.2mm;
+  margin-bottom: 1mm;
+  padding-bottom: 0.3mm;
 }
 
 /* ── Listas de invitados (modo alfabético) ────────────────────────────────── */
@@ -292,13 +407,20 @@ html, body {
 }
 
 .fila-invitado {
-  padding: 0.8mm 0;
+  padding: 0.6mm 0;
   border-bottom: 0.3pt solid var(--color-gris-claro);
   break-inside: avoid;
+  page-break-inside: avoid;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 2mm;
+  gap: 1.5mm;
+}
+
+.col-count-3 .fila-invitado,
+.col-count-4 .fila-invitado {
+  padding: 0.45mm 0;
+  gap: 1.2mm;
 }
 
 .fila-dudosa {
@@ -309,8 +431,8 @@ html, body {
 
 .inv-nombre-completo {
   flex: 1;
-  font-size: 8.5pt;
-  line-height: 1.35;
+  line-height: 1.25;
+  overflow-wrap: break-word;
 }
 
 .inv-apellido {
@@ -322,37 +444,43 @@ html, body {
 }
 
 .inv-mesa {
-  font-size: 7pt;
+  font-size: 0.85em;
   color: var(--color-gris-texto);
   background: var(--color-gris-claro);
-  padding: 0.3mm 1.5mm;
+  padding: 0.2mm 1.5mm;
   border-radius: 1mm;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
+.col-count-3 .inv-mesa,
+.col-count-4 .inv-mesa {
+  font-size: 0.8em;
+  padding: 0.15mm 1.2mm;
+}
+
 .inv-menu {
-  font-size: 6.5pt;
+  font-size: 0.8em;
   font-style: italic;
   color: var(--color-gris-texto);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
-/* ── MODO MESAS ───────────────────────────────────────────────────────────── */
+/* ============================================================================
+   MODO MESAS
+   ============================================================================ */
 
 .columnas-mesas {
-  column-count: 3;
-  column-gap: 6mm;
   column-rule: 0.5pt solid var(--color-gris-medio);
-  orphans: 3;
-  widows: 3;
+  orphans: 2;
+  widows: 2;
 }
 
 .bloque-mesa {
   page-break-inside: avoid;
   break-inside: avoid;
-  margin-bottom: var(--espacio-s);
+  margin-bottom: var(--espacio-m);
 }
 
 .nueva-pagina {
@@ -363,18 +491,19 @@ html, body {
 .encabezado-mesa {
   background: var(--color-primario);
   color: white;
-  padding: 2mm 3mm;
+  padding: 1.8mm 2.5mm;
   display: flex;
   align-items: baseline;
   gap: 2mm;
   margin-bottom: 1mm;
+  border-radius: 1mm;
 }
 
 .mesa-etiqueta {
-  font-size: 7pt;
+  font-size: 6.8pt;
   text-transform: uppercase;
-  letter-spacing: 0.15em;
-  opacity: 0.7;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
 }
 
 .mesa-numero {
@@ -385,23 +514,24 @@ html, body {
 }
 
 .mesa-cantidad {
-  font-size: 7.5pt;
-  opacity: 0.8;
+  font-size: 7.2pt;
+  opacity: 0.85;
 }
 
 .lista-invitados-mesa {
   list-style: decimal;
-  padding-left: 8mm;
+  padding-left: 6mm;
 }
 
 .fila-invitado-mesa {
   padding: 0.5mm 0;
   border-bottom: 0.3pt solid var(--color-gris-claro);
   break-inside: avoid;
+  page-break-inside: avoid;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 3mm;
+  gap: 2.5mm;
 }
 
 .inv-datos-mesa {
@@ -409,22 +539,22 @@ html, body {
 }
 
 .inv-nombre-principal {
-  font-size: 9pt;
+  font-size: 8.5pt;
   font-weight: 600;
 }
 
 .inv-acompanantes {
-  font-size: 7.5pt;
+  font-size: 7.2pt;
   color: var(--color-gris-texto);
-  margin-left: 2mm;
+  margin-left: 1.5mm;
 }
 
 .inv-menu-badge {
-  font-size: 7pt;
+  font-size: 6.8pt;
   font-style: italic;
   color: white;
   background: var(--color-dorado);
-  padding: 0.5mm 2mm;
+  padding: 0.3mm 1.6mm;
   border-radius: 1mm;
   white-space: nowrap;
   flex-shrink: 0;

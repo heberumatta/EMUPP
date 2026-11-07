@@ -187,6 +187,16 @@ def _tokenizar_con_particulas(texto: str) -> list[str]:
     return tokens
 
 
+def _limpiar_valor_opcional(valor: Any) -> str:
+    """Limpia valores opcionales, descartando None, NaN o cadenas vacías/nulas."""
+    if valor is None or pd.isna(valor):
+        return ""
+    texto = str(valor).strip()
+    if texto.lower() in ("nan", "none", "null", "<na>", "nat"):
+        return ""
+    return texto
+
+
 def _normalizar_mesa(texto: str) -> str:
     """Normaliza el valor de la mesa:
 
@@ -194,9 +204,9 @@ def _normalizar_mesa(texto: str) -> str:
     - Si el valor resultante es numérico, lo devuelve tal cual (ej: "7").
     - En caso contrario aplica `aplicar_smart_title_case` para formato legible.
     """
-    if not texto:
+    t = _limpiar_valor_opcional(texto)
+    if not t:
         return ""
-    t = str(texto).strip()
     # Quitar prefijos como "mesa", "Mesa:", "mesa -", etc.
     t = re.sub(r'^(mesa[:\.\-\s]+)', '', t, flags=re.IGNORECASE).strip()
     if re.fullmatch(r"\d+", t):
@@ -399,8 +409,8 @@ def procesar_dataframe(
 
         if modo_separado:
             # ── Modo columnas separadas: solo normalizar casing ──────────────
-            nombre_raw = str(fila.get(columna_nombres, "") or "").strip() if columna_nombres else ""
-            apellido_raw = str(fila.get(columna_apellido, "") or "").strip()  # type: ignore[index]
+            nombre_raw = _limpiar_valor_opcional(fila.get(columna_nombres)) if columna_nombres else ""
+            apellido_raw = _limpiar_valor_opcional(fila.get(columna_apellido)) if columna_apellido else ""
 
             nombre = aplicar_smart_title_case(normalizar_espacios(nombre_raw))
             apellido = aplicar_smart_title_case(normalizar_espacios(apellido_raw))
@@ -418,29 +428,29 @@ def procesar_dataframe(
             }
         else:
             # ── Modo nombre completo: heurísticas ────────────────────────────
-            texto_crudo = str(fila.get(columna_nombres, "") or "") if columna_nombres else ""
+            texto_crudo = _limpiar_valor_opcional(fila.get(columna_nombres)) if columna_nombres else ""
             resultado = procesar_nombre(texto_crudo)
 
-        # Preservar columnas opcionales
+        # Preservar columnas opcionales sin valores "nan"
         mesa_str = (
-            str(fila[columna_mesa]).strip()
+            _limpiar_valor_opcional(fila.get(columna_mesa))
             if columna_mesa and columna_mesa in df.columns
             else ""
         )
         resultado["mesa"] = _normalizar_mesa(mesa_str) if mesa_str else ""
         resultado["acompanantes"] = (
-            str(fila[columna_acompanantes]).strip()
+            _limpiar_valor_opcional(fila.get(columna_acompanantes))
             if columna_acompanantes and columna_acompanantes in df.columns
             else ""
         )
         resultado["menu"] = (
-            str(fila[columna_menu]).strip()
+            _limpiar_valor_opcional(fila.get(columna_menu))
             if columna_menu and columna_menu in df.columns
             else ""
         )
 
         resultado["dni"] = (
-            str(fila[columna_dni]).strip()
+            _limpiar_valor_opcional(fila.get(columna_dni))
             if columna_dni and columna_dni in df.columns
             else ""
         )
@@ -460,5 +470,7 @@ def procesar_dataframe(
         "es_dudoso",
         "motivo",
     ]
+    if df_resultado.empty:
+        return pd.DataFrame(columns=columnas_ordenadas)
     columnas_finales = [c for c in columnas_ordenadas if c in df_resultado.columns]
     return df_resultado[columnas_finales]
